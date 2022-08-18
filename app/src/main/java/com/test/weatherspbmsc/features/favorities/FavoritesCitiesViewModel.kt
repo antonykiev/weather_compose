@@ -18,10 +18,8 @@ class FavoritesCitiesViewModel @Inject constructor(
     private val useCase: GetWeatherUseCase
 ): ViewModel() {
 
-
     private val _weather = MutableStateFlow<Event>(Event.Loading)
     val weather = _weather.asStateFlow()
-
 
     init {
         viewModelScope.launch {
