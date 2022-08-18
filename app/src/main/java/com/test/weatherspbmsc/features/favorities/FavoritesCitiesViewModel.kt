@@ -26,19 +26,24 @@ class FavoritesCitiesViewModel @Inject constructor(
     init {
         viewModelScope.launch {
 
-            val resultList: List<WeatherEntity> = withContext(Dispatchers.IO) {
-                useCase.invoke()
-            }
-            val resultMap: Map<String, List<WeatherEntity>> = withContext(Dispatchers.Default) {
-                val keys: List<String> = resultList.associateBy { it.cityName }.map { it.key }
-                return@withContext keys.map { key ->  key to resultList.filter { it.cityName == key } }
-                    .toMap()
+            try {
+                val resultList: List<WeatherEntity> = withContext(Dispatchers.IO) {
+                    useCase.invoke()
+                }
+                val resultMap: Map<String, List<WeatherEntity>> = withContext(Dispatchers.Default) {
+                    val keys: List<String> = resultList.associateBy { it.cityName }.map { it.key }
+                    return@withContext keys.map { key ->  key to resultList.filter { it.cityName == key } }
+                        .toMap()
+                }
 
+                _weather.emit(
+                    Event.LoadedSuccess(resultMap)
+                )
+            } catch (e: Exception) {
+                _weather.emit(
+                    Event.Error(e.localizedMessage ?: "")
+                )
             }
-
-            _weather.emit(
-                Event.LoadedSuccess(resultMap)
-            )
         }
     }
 

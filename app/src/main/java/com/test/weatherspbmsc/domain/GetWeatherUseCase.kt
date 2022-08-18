@@ -17,7 +17,7 @@ class GetWeatherUseCase @Inject constructor(
 ) {
 
     private val favoritesCities = listOf("Moscow", "Saint Petersburg")
-    private val validTimeDiff = 60 * 60 * 60
+    private val validTimeDiff = 60 * 60
 
     suspend operator fun invoke(): List<WeatherEntity> {
 

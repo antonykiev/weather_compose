@@ -28,15 +28,27 @@ import java.util.*
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun FavoritesLoading(
-    viewModel: FavoritesCitiesViewModel = hiltViewModel(),
+    viewModel: FavoritesCitiesViewModel,
 ) {
 
     when (val state = viewModel.weather.collectAsState().value) {
-        is FavoritesCitiesViewModel.Event.Error -> TODO()
+        is FavoritesCitiesViewModel.Event.Error -> {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = state.value)
+            }
+        }
         is FavoritesCitiesViewModel.Event.LoadedSuccess ->
-            FavoritesSuccessLoaded(state.value)
+            FavoritesSuccessLoaded(viewModel, state.value)
         FavoritesCitiesViewModel.Event.Loading -> {
-
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+            }
         }
     }
 }
@@ -44,10 +56,16 @@ fun FavoritesLoading(
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun FavoritesSuccessLoaded(
+    viewModel: FavoritesCitiesViewModel,
     weatherMap: Map<String, List<WeatherEntity>>
 ) {
-    val pageCount = weatherMap.map { it.key }.size
+    val tabList = weatherMap.map { it.key }
+    val pageCount = tabList.size
     val pagerState = rememberPagerState(pageCount = pageCount)
+    val currentWeather = tabList[pagerState.currentPage]
+        .let {
+            weatherMap[it]?.first()
+        }
 
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -57,7 +75,8 @@ fun FavoritesSuccessLoaded(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
-            temperature = "some"
+            temperature = currentWeather?.dayTemperature ?: "",
+            weatherIcon = currentWeather?.icon ?: ""
         )
 
         Row(modifier = Modifier
@@ -66,11 +85,11 @@ fun FavoritesSuccessLoaded(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "some",
+                text = currentWeather?.description ?: "",
             )
         }
 
-        Tabs(pagerState = pagerState, weatherMap = weatherMap)
+        Tabs(viewModel, pagerState = pagerState, weatherMap = weatherMap)
         TabsContent(pagerState = pagerState, weatherMap = weatherMap)
     }
 }
@@ -78,6 +97,7 @@ fun FavoritesSuccessLoaded(
 @ExperimentalPagerApi
 @Composable
 fun Tabs(
+    viewModel: FavoritesCitiesViewModel,
     pagerState: PagerState,
     weatherMap: Map<String, List<WeatherEntity>>
 ) {
@@ -155,7 +175,7 @@ fun MySimpleListItem(entity: WeatherEntity) {
             modifier = Modifier
                 .wrapContentWidth()
                 .padding(16.dp),
-            temperature = "${entity.dayTemperature} \u2103",
+            temperature = entity.dayTemperature,
             imageHeight = 60.dp,
             weatherIcon = entity.icon
         )
@@ -181,7 +201,7 @@ fun WeatherIndicator(
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
     imageHeight: Dp = 120.dp,
     textSize: Int = 0,
-    weatherIcon: String = "",
+    weatherIcon: String,
     temperature: String
 ) {
     Row (
@@ -196,11 +216,13 @@ fun WeatherIndicator(
             model = model,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.sizeIn(maxHeight = imageHeight)
+            modifier = Modifier
+                .height(imageHeight)
+                .width(imageHeight)
         )
 
         Text(
-            text = temperature,
+            text = "$temperature \u2103",
             modifier = Modifier.padding(start = 16.dp)
         )
     }
