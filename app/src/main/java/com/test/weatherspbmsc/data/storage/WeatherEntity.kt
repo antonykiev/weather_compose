@@ -14,7 +14,7 @@ data class WeatherEntity(
     val longitude: Float,
     val icon: String,
     val description: String,
-    val dayTemperature: Float,
-    val timestamp: Long = System.currentTimeMillis()/1000,
+    val dayTemperature: String,
+    val timestamp: Long = System.currentTimeMillis() / 1000,
 
 )

@@ -38,7 +38,7 @@ data class ForecastItem(
 @Serializable
 data class Temperature(
     @SerialName("day")
-    val day: Float
+    val day: String
 )
 
 @Serializable

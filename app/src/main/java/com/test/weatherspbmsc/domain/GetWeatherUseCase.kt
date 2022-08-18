@@ -16,6 +16,7 @@ class GetWeatherUseCase @Inject constructor(
     val api: RestApi
 ) {
 
+    private val favoritesCities = listOf("Moscow", "Saint Petersburg")
     private val validTimeDiff = 60 * 60 * 60
 
     suspend operator fun invoke(): List<WeatherEntity> {
@@ -30,25 +31,29 @@ class GetWeatherUseCase @Inject constructor(
         if (timestampDiff < validTimeDiff) {
             return storageWeatherList
         } else {
-            val cityData = api.getDailyForecastByCityName(
-                "London",
+            val result = favoritesCities.map { cityName ->
+                val cityData = api.getDailyForecastByCityName(
+                    cityName,
                 language = WeatherLanguage.Russian.value,
+            )
+                val weatherRemote = api.getDailyForecast(
+                    longitude = cityData.coordinates.longitude,
+                    latitude = cityData.coordinates.latitude,
+                    days = 16,
+                    language = WeatherLanguage.Russian.value,
+                    units = WeatherUnits.metric.name
                 )
-            val weatherRemote = api.getDailyForecast(
-                longitude = cityData.coordinates.longitude,
-                latitude = cityData.coordinates.latitude,
-                days = 16,
-                language = WeatherLanguage.Russian.value,
-                units = WeatherUnits.metric.name
-            )
 
-            val weather = weatherRemote.toEntityLis(
-                cityData.name,
-                cityData.coordinates.latitude,
-                cityData.coordinates.longitude
-            )
-            updateStorage(weather)
-            return weather
+                val weather = weatherRemote.toEntityLis(
+                    cityData.name,
+                    cityData.coordinates.latitude,
+                    cityData.coordinates.longitude
+                )
+                return@map weather
+            }.flatten()
+                .also { updateStorage(it) }
+
+            return result
         }
     }
 

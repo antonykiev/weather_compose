@@ -6,14 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.test.weatherspbmsc.data.storage.WeatherEntity
 import com.test.weatherspbmsc.domain.GetWeatherUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class FavoritesCitiesViewModel @Inject constructor(
-    val useCase: GetWeatherUseCase
+    private val useCase: GetWeatherUseCase
 ): ViewModel() {
 
 
@@ -23,9 +25,20 @@ class FavoritesCitiesViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val retsult = Event.LoadedSuccess(useCase.invoke())
 
-            _weather.emit(retsult)
+            val resultList: List<WeatherEntity> = withContext(Dispatchers.IO) {
+                useCase.invoke()
+            }
+            val resultMap: Map<String, List<WeatherEntity>> = withContext(Dispatchers.Default) {
+                val keys: List<String> = resultList.associateBy { it.cityName }.map { it.key }
+                return@withContext keys.map { key ->  key to resultList.filter { it.cityName == key } }
+                    .toMap()
+
+            }
+
+            _weather.emit(
+                Event.LoadedSuccess(resultMap)
+            )
         }
     }
 
@@ -35,11 +48,11 @@ class FavoritesCitiesViewModel @Inject constructor(
         object Loading : Event()
 
         data class LoadedSuccess(
-            val value: List<WeatherEntity>
-        ): Event()
+            val value: Map<String, List<WeatherEntity>>
+        ) : Event()
 
         data class Error(
             val value: String
-        )
+        ) : Event()
     }
 }

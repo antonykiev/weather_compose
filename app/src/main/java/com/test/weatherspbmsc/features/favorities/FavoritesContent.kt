@@ -4,35 +4,51 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
+import androidx.compose.runtime.internal.composableLambda
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.pager.*
 import com.test.weatherspbmsc.R
+import com.test.weatherspbmsc.data.storage.WeatherEntity
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
-@Preview
+@OptIn(ExperimentalPagerApi::class)
 @Composable
-fun FavoritesContentPreview() {
-    Surface(color = MaterialTheme.colors.background) {
-        FavoritesContent()
+fun FavoritesLoading(
+    viewModel: FavoritesCitiesViewModel = hiltViewModel(),
+) {
+
+    when (val state = viewModel.weather.collectAsState().value) {
+        is FavoritesCitiesViewModel.Event.Error -> TODO()
+        is FavoritesCitiesViewModel.Event.LoadedSuccess ->
+            FavoritesSuccessLoaded(state.value)
+        FavoritesCitiesViewModel.Event.Loading -> {
+
+        }
     }
 }
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun FavoritesContent(
-    viewModel: FavoritesCitiesViewModel = hiltViewModel()
+fun FavoritesSuccessLoaded(
+    weatherMap: Map<String, List<WeatherEntity>>
 ) {
+    val pageCount = weatherMap.map { it.key }.size
+    val pagerState = rememberPagerState(pageCount = pageCount)
 
-    val pagerState = rememberPagerState(pageCount = 3)
 
     Column(modifier = Modifier.fillMaxSize()) {
         WeatherIndicator(
@@ -54,25 +70,24 @@ fun FavoritesContent(
             )
         }
 
-        Tabs(pagerState = pagerState)
-        TabsContent(pagerState = pagerState)
+        Tabs(pagerState = pagerState, weatherMap = weatherMap)
+        TabsContent(pagerState = pagerState, weatherMap = weatherMap)
     }
 }
 
-
-
 @ExperimentalPagerApi
 @Composable
-fun Tabs(pagerState: PagerState) {
+fun Tabs(
+    pagerState: PagerState,
+    weatherMap: Map<String, List<WeatherEntity>>
+) {
     val colorActiveTab = Color.Black
     val colorInactiveTab = Color.LightGray
     val colorBackGround = Color.White
 
 
-    val list = listOf(
-        "Home" ,
-        "Shopping"
-    )
+    val tabList = weatherMap.map { it.key }
+
     val scope = rememberCoroutineScope()
     TabRow(
         selectedTabIndex = pagerState.currentPage,
@@ -86,11 +101,11 @@ fun Tabs(pagerState: PagerState) {
             )
         }
     ) {
-        list.forEachIndexed { index, _ ->
+        tabList.forEachIndexed { index, _ ->
             Tab(
                 text = {
                     val color = if (pagerState.currentPage == index) colorActiveTab else colorInactiveTab
-                    Text(text = list[index], color = color)
+                    Text(text = tabList[index], color = color)
                 },
                 selected = pagerState.currentPage == index,
                 onClick = {
@@ -105,29 +120,33 @@ fun Tabs(pagerState: PagerState) {
 
 @ExperimentalPagerApi
 @Composable
-fun TabsContent(pagerState: PagerState) {
+fun TabsContent(
+    pagerState: PagerState,
+    weatherMap: Map<String, List<WeatherEntity>>
+
+) {
+    val keys = weatherMap.map { it.key }.toHashSet()
+    val test = weatherMap.toList().map { it.second }.flatten()
     HorizontalPager(state = pagerState) { page ->
-        when (page) {
-            0 -> TabContentScreen(data = "Welcome to Home Screen")
-            1 -> TabContentScreen(data = "Welcome to Shopping Screen")
-            2 -> TabContentScreen(data = "Welcome to Settings Screen")
-        }
+
+        val key = keys.toList()[page]
+
+        TabContentScreen(entityList = test.filter { it.cityName == key })
     }
 }
 
 @Composable
-fun TabContentScreen(data: String) {
+fun TabContentScreen(entityList: List<WeatherEntity>) {
 
-    val testData = listOf("test0","test0","test0","test0","test0","test0",)
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(count = testData.size) { index ->
-            MySimpleListItem(itemViewState = testData[index])
+        items(count = entityList.size) { index ->
+            MySimpleListItem(entity = entityList[index])
         }
     }
 }
 
 @Composable
-fun MySimpleListItem(itemViewState: String) {
+fun MySimpleListItem(entity: WeatherEntity) {
     Row(modifier = Modifier
         .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically) {
@@ -136,19 +155,21 @@ fun MySimpleListItem(itemViewState: String) {
             modifier = Modifier
                 .wrapContentWidth()
                 .padding(16.dp),
-            temperature = "some",
-            imageHeight = 60.dp
+            temperature = "${entity.dayTemperature} \u2103",
+            imageHeight = 60.dp,
+            weatherIcon = entity.icon
         )
         Row(modifier = Modifier
             .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.End
         ) {
+            val formattedDate = SimpleDateFormat("dd MMMM").format(Date(entity.date * 1000L))
             Text(
                 modifier = Modifier
                     .wrapContentWidth()
                     .padding(end = 16.dp),
-                text = "date")
+                text = formattedDate)
         }
     }
 }
@@ -160,6 +181,7 @@ fun WeatherIndicator(
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
     imageHeight: Dp = 120.dp,
     textSize: Int = 0,
+    weatherIcon: String = "",
     temperature: String
 ) {
     Row (
@@ -169,10 +191,11 @@ fun WeatherIndicator(
         verticalAlignment = verticalAlignment
     ) {
 
-        val image = painterResource(R.drawable.ic_launcher_background)
-        Image(
-            painter = image,
+        val model = "https://openweathermap.org/img/w/${weatherIcon}.png"
+        AsyncImage(
+            model = model,
             contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier.sizeIn(maxHeight = imageHeight)
         )
 
