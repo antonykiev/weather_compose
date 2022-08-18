@@ -1,9 +1,12 @@
 package com.test.weatherspbmsc.features.favorities
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -18,7 +21,9 @@ fun FavoritesScreen(navController: NavHostController = rememberNavController()) 
     Scaffold(
         bottomBar = { BottomBar(navController = navController) }
     ) {
-        FavoritesNavGraph(navController = navController)
+        Box(modifier = Modifier.padding(it)) {
+            FavoritesNavGraph(navController = navController)
+        }
     }
 }
 
