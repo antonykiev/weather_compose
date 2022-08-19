@@ -11,6 +11,7 @@ import com.test.weatherspbmsc.BottomBarScreen
 import com.test.weatherspbmsc.features.ScreenContent
 import com.test.weatherspbmsc.features.favorities.FavoritesCitiesViewModel
 import com.test.weatherspbmsc.features.favorities.FavoritesLoading
+import com.test.weatherspbmsc.features.map.MapScreenContent
 
 @Composable
 fun FavoritesNavGraph(
@@ -30,8 +31,8 @@ fun FavoritesNavGraph(
         }
 
         composable(route = BottomBarScreen.Map.route) {
-            ScreenContent(
-                name = BottomBarScreen.Map.route,
+            MapScreenContent(
+
             )
         }
 
